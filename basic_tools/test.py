@@ -13,7 +13,7 @@ texts = [
 ]
 
 # 1. 文本向量化
-model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')  # 中文可用 `paraphrase-multilingual-MiniLM-L12-v2`
+model = SentenceTransformer(r'C:\Users\ckhoi\PycharmProjects\atelier-medusa\models\sentence-transformers\paraphrase-multilingual-MiniLM-L12-v2')  # 中文可用 `paraphrase-multilingual-MiniLM-L12-v2`
 embeddings = model.encode(texts)
 
 # 2. 聚类（假设你知道有多少类），也可以自动估计
