@@ -179,6 +179,18 @@ if __name__ == "__main__":
         # uc_subprocess=False
         # uc_cdp_events=True
     )
+
+    wrapper = SBOmniWrapper(
+        binary_location="/usr/bin/google-chrome-stable",
+        proxy="127.0.0.1:5082",
+        # extension_zip="/tmp/my_ext.zip",
+        user_data_dir=r"/tmp/ud",
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+        uc = True,
+        headless = False,
+    )
+
+
     driver = wrapper.driver
     driver.get("https://ipinfo.io")
     time.sleep(5)

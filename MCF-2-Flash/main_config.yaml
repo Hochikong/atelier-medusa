@@ -1,0 +1,42 @@
+Selenium:
+  binary_location: "/usr/bin/google-chrome-stable"
+  proxy: "127.0.0.1:5082"
+  # extension_zip="/tmp/my_ext.zip",
+  user_data_dir: r"/tmp/ud"
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0"
+  uc: True
+  headless: False
+  # 这里的参数会原封不动地传递给Wrapper
+
+Common:
+  max_timeout: 50
+  max_workers: 4
+  target_save_dir: /home/jack/Downloads/XXXX
+
+
+Logging:
+  logfile_dir: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/logs/mcf_v2/
+  screenshots: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/logs/screenshots
+
+Extensions:
+  namespace: mcf_v2
+  ByExtensions:
+    # 这下面的配置为单独为某个插件适配的参数
+    plugin_1:
+      author: xxx
+      target_list:
+        - 1
+        - 2
+        - 3
+      filter_url: yyy
+      start_page: 1
+      end_page: 6
+      save_to_url: zzz
+
+    plugin_2:
+      author: x111
+      target_list:
+        - 1
+        - 2
+        - 3
+
