@@ -1,0 +1,51 @@
+Selenium:
+  binary_location: /usr/bin/google-chrome-stable
+  proxy: 127.0.0.1:5082
+  # extension_zip="/tmp/my_ext.zip",
+  user_data_dir: /tmp/ud
+  user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0
+  uc: True
+  headless: False
+  # 这里的参数会原封不动地传递给Wrapper
+
+Common:
+  max_timeout: 50
+  max_workers: 4
+  target_save_dir: /home/jack/Downloads/XXXX
+
+
+Logging:
+  logfile_dir: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/logs/mcf_v2/
+  screenshots: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/logs/screenshots
+
+Extensions:
+  # 控制MCF v2只读哪个namespace的插件
+  namespace: mcf_v2
+  plugin_logs_dir: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/logs/plugin_logs
+  headers:
+    user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36
+  ByExtensions:
+    # 这下面的配置为单独为某个插件适配的参数
+    plugin_1:
+      # 预填了部分参数的模板，redis上的数据要基于此模板构造，其内容基本上就是本模块的相关字段
+      extension_param_template_path: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/TMP/plugin_1_param_template.yml
+      # 除了dynamic_load_from自身，所有参数都应该优先尝试读取redis中同插件名key下面的配置
+      dynamic_load_from: redis://192.168.81.134:6379/0
+      author: xxx
+      target_list:
+        - 1
+        - 2
+        - 3
+      filter_url: yyy
+      start_page: 1
+      end_page: 6
+      save_to_url: zzz
+
+    plugin_2:
+      dynamic_load_from: redis://192.168.81.134:6379/0
+      author: x111
+      target_list:
+        - 1
+        - 2
+        - 3
+
