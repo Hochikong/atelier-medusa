@@ -14,7 +14,7 @@ class MiniREPL:
     MAX_PERSISTENT = 10  # 重启后保留条数
 
     intro = "| Welcome to use MCF 2.0 Flash REPL!\n| Version: 0.0.1 - 20250824"
-    prompt = "MCFv2 >>> "
+    prompt = "MCFv2 >>>"
 
     def __init__(self, obj: MCF2FlashCore):
         self._in_memory: List[str] = []  # 本次会话全部历史
