@@ -1,6 +1,8 @@
 from celery import Celery
 from loguru import logger
 from celery.signals import worker_process_init, worker_process_shutdown
+from celery.schedules import crontab
+
 from MCF2Flash.mcf_2f.mcf_2f_core import MCF2FlashCore
 from MCF2Flash.loguru_setup import loguru_setup
 from MCF2Flash.app_config import CELERY_BROKER_URL, CELERY_RESULT_BACKEND, MCF2F_CONFIG
@@ -40,6 +42,13 @@ celery_app.conf.update(
     timezone="Asia/Shanghai",
     enable_utc=False,
 )
+
+celery_app.conf.beat_schedule = {
+    'run-tasks-not-done-every-2-minutes': {
+        'task': 'MCF2Flash.celery_misc.mcf_v2_tasks.run_tasks_not_done',
+        'schedule': crontab(minute='*/2'),  # 每2分钟执行一次
+    },
+}
 
 
 @worker_process_init.connect
