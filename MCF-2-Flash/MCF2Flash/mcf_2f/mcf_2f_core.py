@@ -1,10 +1,14 @@
 import os
+import subprocess
 import sys
 import pathlib
 import traceback
+from time import sleep
 
 import pandas as pd
 from typing import Any, List, Union
+
+import psutil
 from seleniumbase import Driver, SB
 from sqlalchemy import text
 
@@ -41,6 +45,13 @@ class MCF2FlashCore(object):
         self.plugin_logs_dir = self.config['Extensions']['plugin_logs_dir']
         os.makedirs(self.plugin_logs_dir, exist_ok=True)
 
+        # 运行环境
+        self.use_xvnc = self.config.get('Environment', {}).get('use_xvnc', False)
+        self.vnc_port = self.config.get('Environment', {}).get('vnc_port', 5911)
+        self.novnc_port = self.config.get('Environment', {}).get('novnc_port', 9101)
+        self.v_display = None
+        self.novnc_proc = None
+
         # 插件相关
         self.extension_config = self.config['Extensions']
         self.extension_ns = self.extension_config['namespace']
@@ -61,6 +72,55 @@ class MCF2FlashCore(object):
             self.driver = self.sb_manager.driver
         else:
             self.logger.warning("Browser already initialized!")
+
+    def stop_xvnc(self):
+        if self.v_display:
+            self.v_display.stop()
+
+        if self.novnc_proc:
+            pid = self.novnc_proc.pid
+            parent = psutil.Process(pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+            self.novnc_proc.terminate()
+
+    def start_xvnc(self) -> bool:
+        logger = self.logger
+        vnc_port = self.vnc_port
+        forward_port = self.novnc_port
+        if os.name == 'posix' and self.use_xvnc:
+            # 默认PyVirtualDisplay实现
+            try:
+                from pyvirtualdisplay import Display
+                logger.info(f"启动novnc服务，转发本地vnc端口{vnc_port}至{forward_port}")
+                self.novnc_proc = subprocess.Popen(f"novnc --vnc localhost:{vnc_port} --listen {forward_port}",
+                                                   shell=True)
+
+                # kill掉有相同rfbport的xvnc进程
+                vnc_processes = []
+                for proc in psutil.process_iter():
+                    if f'-rfbport {vnc_port}' in ' '.join(proc.cmdline()):
+                        vnc_processes.append(proc)
+                for i in vnc_processes:
+                    i.kill()
+                    logger.info(f"清除抢占xvnc端口: {vnc_port} 的进程")
+                sleep(1)
+
+                logger.info(f"启动xvnc服务，本地端口{vnc_port}")
+                self.v_display = Display(backend="xvnc", size=(1920, 1080), rfbport=vnc_port)
+                self.v_display.start()
+            except ModuleNotFoundError:
+                logger.info("未找到pyvirtualdisplay模块，尝试使用xvfbwrapper")
+                from xvfbwrapper import Xvfb
+                self.v_display = Xvfb()
+                self.v_display.start()
+            except Exception as e:
+                logger.error(f"启动xvnc服务失败: {e}")
+                logger.error(traceback.format_exc())
+
+            return True
+        else:
+            return False
 
     def dispose(self):
         if self.sb_manager is not None:
