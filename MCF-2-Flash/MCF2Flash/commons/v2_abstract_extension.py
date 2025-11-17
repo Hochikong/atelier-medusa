@@ -123,6 +123,7 @@ class AbstractExtensionMCFV2(metaclass=ABCMeta):
     def parse_extension_config(self, config: dict):
         """
         解析插件的配置信息，用于校验插件支持的参数是否齐全，顺便起到解析的作用，会调用get_name从配置中读取对应的部分
+        主要目的是更新redis上存储的配置文件中比较常更新的部分参数，比如任务清单。具体实现由插件来定义
 
         :param config: 主配置文件中的Extensions片段，参考下面的YAML格式
                        Extensions:
@@ -171,5 +172,13 @@ class AbstractExtensionMCFV2(metaclass=ABCMeta):
 
         :param on:
         :return:
+        """
+        pass
+
+    @abstractmethod
+    def can_merge_multiple_to_one_batch(self) -> bool:
+        """
+        是否支持把多个任务项合并成单次批量执行
+
         """
         pass

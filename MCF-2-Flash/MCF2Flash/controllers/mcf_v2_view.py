@@ -8,7 +8,8 @@ from sqlalchemy.orm.exc import NoResultFound
 
 import MCF2Flash.repository.defined_repositories as dr
 from MCF2Flash.celery_misc.mcf_v2_tasks import init_browser as ib, dispose_browser as db, run_tasks_not_done
-from MCF2Flash.domains.defined_domains import SingleTaskReceive, BulkTasksReceive, TaskRowCreate
+from MCF2Flash.domains.defined_domains import SingleTaskReceive, BulkTasksReceive, TaskRowCreate, \
+    SingleTaskReceiveSpecial
 from MCF2Flash.fastapi_depends import SessionLocal
 
 router = APIRouter()
@@ -34,8 +35,32 @@ def dispose_browser():
     return {"celery_task_id": task.id}
 
 
+@router.post("/mcf/v2/tasks/single/special", tags=['tasks'])
+def receive_task(task: SingleTaskReceiveSpecial, db: Session = Depends(get_db)):
+    """
+    适用于特殊任务的一次性提交
+
+    :param task:
+    :param db:
+    :return:
+    """
+    logger.info(f"Received task: {task.url}")
+    created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
+                                 driver_info=task.driver, extra_content=task.extra_content)
+    status = dr.create_task(db, created_task)
+    total_status = status
+    return {'status': total_status}
+
+
 @router.post("/mcf/v2/tasks/single/", tags=['tasks'])
 def receive_task(task: SingleTaskReceive, db: Session = Depends(get_db)):
+    """
+    常规批量任务单个发送
+
+    :param task:
+    :param db:
+    :return:
+    """
     total_status = False
     logger.info(f"Received task: {task.url}")
     driver_info = get_router_output_v2(task.url)
@@ -49,6 +74,13 @@ def receive_task(task: SingleTaskReceive, db: Session = Depends(get_db)):
 
 @router.post("/mcf/v2/tasks/bulk/", tags=['tasks'])
 def receive_tasks(tasks: BulkTasksReceive, db: Session = Depends(get_db)):
+    """
+    常规批量任务批量发送
+
+    :param task:
+    :param db:
+    :return:
+    """
     total_status = False
     params = tasks.params
     for url in tasks.urls:
@@ -73,6 +105,7 @@ def get_single_task(uid: str, db: Session = Depends(get_db)):
 @router.get('/mcf/v2/tasks/status/', tags=['tasks'])
 def get_tasks_by_status(code: int, db: Session = Depends(get_db)):
     return dr.get_tasks_by_status(db, code)
+
 
 @router.post('/mcf/v2/tasks/run_not_done', tags=['tasks'])
 def run_not_done():

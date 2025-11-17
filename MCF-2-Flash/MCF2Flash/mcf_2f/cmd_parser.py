@@ -1,6 +1,7 @@
+import traceback
 from typing import Dict, Any
 import shlex
-from mcf_2f.mcf_2f_core import MCF2FlashCore
+from MCF2Flash.mcf_2f.mcf_2f_core import MCF2FlashCore
 
 
 class MCF2ShellParser(object):
@@ -29,7 +30,7 @@ class MCF2ShellParser(object):
                 print("  /h or /help [command]    - Show help for a specific command")
                 print("  /get_browser             - Init browser by configuration file")
                 print("  /safe_check              - Check the browser status and visit a cloudflare protected website")
-                print("  /run_extension           - Run a MCF v2 Extension")
+                print("  /run_extension           - Run a MCF v2 Extension, example: /run_extension XXX")
                 print("  /exit                    - Exit shell")
 
             elif CMD == 'get_browser':
@@ -47,8 +48,8 @@ class MCF2ShellParser(object):
                 try:
                     result = mcf.run_driver(driver_name)
                     print(result)
-                except Exception as e:
-                    print(e)
+                except Exception as _:
+                    print(traceback.format_exc())
             elif CMD == 'exit':
                 print("Exiting...")
                 if mcf:

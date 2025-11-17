@@ -29,8 +29,8 @@ Extensions:
     plugin_1:
       # 预填了部分参数的模板，redis上的数据要基于此模板构造，其内容基本上就是本模块的相关字段
       extension_param_template_path: /home/jack/PycharmProjects/atelier-medusa/MCF-2-Flash/TMP/plugin_1_param_template.yml
-      # 除了dynamic_load_from自身，所有参数都应该优先尝试读取redis中同插件名key下面的配置
-      dynamic_load_from: redis://192.168.81.134:6379/0
+      # 除了dynamic_load_from自身，所有参数都应该优先尝试读取redis中同插件名key下面的配置。此外，dynamic_load_from是本配置文件的必填项
+      dynamic_load_from: redis://192.168.81.128:6379/0
       author: xxx
       target_list:
         - 1
@@ -42,7 +42,7 @@ Extensions:
       save_to_url: zzz
 
     plugin_2:
-      dynamic_load_from: redis://192.168.81.134:6379/0
+      dynamic_load_from: redis://192.168.81.128:6379/0
       author: x111
       target_list:
         - 1

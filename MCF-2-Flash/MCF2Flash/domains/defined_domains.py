@@ -1,10 +1,17 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
+
 
 # pydantic model适用于view函数返回或者作为view函数的输入，如果要执行查询，需要转换为entity（即ORM对象）或者启用from_attributes
 
 class SingleTaskReceive(BaseModel):
     url: str
+
+
+class SingleTaskReceiveSpecial(BaseModel):
+    url: str
+    driver: str # namespace:DRIVER_NAME
+    extra_content: Optional[str] # 存放字符串或者json字符串
 
 
 class BulkTasksReceive(BaseModel):

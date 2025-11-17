@@ -71,9 +71,9 @@ class MCF2FlashCore(object):
 
     def run_driver(self, extensions: Union[List[str], str] = None) -> Any:
         ext_mgr = self.extension_loader
-        sb_manger = self.sb_manager
+        sb_manager = self.sb_manager
         if isinstance(extensions, str):
-            done, msg = ext_mgr.call(extensions, "prepare", sb_manger, self.config)
+            done, msg = ext_mgr.call(extensions, "prepare", sb_manager, self.config)
             if not done:
                 self.logger.error(msg)
                 raise Exception(msg)
@@ -97,7 +97,7 @@ class MCF2FlashCore(object):
             results_by_ext = {}
             unique_extensions = list(set(extensions))
             for ext in unique_extensions:
-                done, msg = ext_mgr.call(ext, "prepare", sb_manger, self.config)
+                done, msg = ext_mgr.call(ext, "prepare", sb_manager, self.config)
                 if not done:
                     self.logger.error(msg)
                     raise Exception(msg)
@@ -164,48 +164,89 @@ class MCF2FlashCore(object):
                     ext_name = drn.split(':')[-1]
                     extension: AbstractExtensionMCFV2 = ext_mgr[ext_name]
                     rows: pd.DataFrame = tasks_by_driver[drn]
+
+                    # 是否拥有指定的子下载目录
                     no_download_dir = rows[rows['download_dir'].isnull()].copy()
                     with_download_dir = rows[rows['download_dir'].notnull()].copy()
 
-                    if len(no_download_dir) > 0:
-                        logger.info("开始执行无专门指定下载目录的零散取数任务")
-                        tasks_list = TaskListV2DataForExtensions.from_pandas(no_download_dir)
-                        logger.info("调用插件解析队列任务")
-                        tasks_list_template = extension.parse_tasklist_to_redis(
-                            yaml_loader(extension_template_path[ext_name]),
-                            tasks_list)
-                        redis_client = SimpleRedis(dynamic_load_from[ext_name])
-                        redis_client.set(ext_name, tasks_list_template)
-                        logger.info("任务已保存至Redis")
-
-                        r = self.run_driver(ext_name)
-                        done_tasks = r.get('done_tasks', [])
-                        if len(done_tasks) > 0:
-                            all_done_jobs.extend(done_tasks)
-                        logger.info("零散任务执行完毕\n")
-
-                    if len(with_download_dir):
-                        logger.info("开始执行有指定下载目录的零散取数任务")
-                        for down_dir in with_download_dir['download_dir'].unique():
-                            tasks_list = TaskListV2DataForExtensions.from_pandas(
-                                with_download_dir[with_download_dir['download_dir'] == down_dir])
+                    if extension.can_merge_multiple_to_one_batch():
+                        if len(no_download_dir) > 0:
+                            logger.info("开始执行 可合并子任务-无专门指定下载目录 的零散取数任务")
+                            tasks_list = TaskListV2DataForExtensions.from_pandas(no_download_dir)
+                            logger.info("调用插件解析队列任务")
                             tasks_list_template = extension.parse_tasklist_to_redis(
                                 yaml_loader(extension_template_path[ext_name]),
                                 tasks_list)
                             redis_client = SimpleRedis(dynamic_load_from[ext_name])
                             redis_client.set(ext_name, tasks_list_template)
                             logger.info("任务已保存至Redis")
+
                             r = self.run_driver(ext_name)
                             done_tasks = r.get('done_tasks', [])
                             if len(done_tasks) > 0:
                                 all_done_jobs.extend(done_tasks)
-                            logger.info(f"指定下载目录为{down_dir}的任务执行完毕\n")
+                            logger.info("零散任务执行完毕\n")
+
+                        if len(with_download_dir) > 0:
+                            logger.info("开始执行 可合并子任务-有指定下载目录 的零散取数任务")
+                            for down_dir in with_download_dir['download_dir'].unique():
+                                tasks_list = TaskListV2DataForExtensions.from_pandas(
+                                    with_download_dir[with_download_dir['download_dir'] == down_dir])
+                                tasks_list_template = extension.parse_tasklist_to_redis(
+                                    yaml_loader(extension_template_path[ext_name]),
+                                    tasks_list)
+                                redis_client = SimpleRedis(dynamic_load_from[ext_name])
+                                redis_client.set(ext_name, tasks_list_template)
+                                logger.info("任务已保存至Redis")
+                                r = self.run_driver(ext_name)
+                                done_tasks = r.get('done_tasks', [])
+                                if len(done_tasks) > 0:
+                                    all_done_jobs.extend(done_tasks)
+                                logger.info(f"指定下载目录为{down_dir}的任务执行完毕\n")
+                    else:
+                        if len(no_download_dir) > 0:
+                            logger.info("开始执行 不可合并子任务-无专门指定下载目录 的零散取数任务")
+                            tasks_list = TaskListV2DataForExtensions.from_pandas(no_download_dir)
+                            for task in tasks_list:
+                                # 不可合并任务使用task_uid来标记任务完成情况
+                                task_uid = task.task_uid
+                                logger.info("调用插件解析队列任务")
+                                tasks_list_template = extension.parse_tasklist_to_redis(
+                                    yaml_loader(extension_template_path[ext_name]),
+                                    [task])
+                                redis_client = SimpleRedis(dynamic_load_from[ext_name])
+                                redis_client.set(ext_name, tasks_list_template)
+                                logger.info("任务已保存至Redis")
+
+                                r = self.run_driver(ext_name)
+                                done_tasks = r.get('done_tasks', [])
+                                if len(done_tasks) > 0:
+                                    all_done_jobs.append(task_uid)
+                                logger.info(f"零散任务 {task} 执行完毕\n")
+                        if len(with_download_dir) > 0:
+                            logger.info("开始执行 不可合并子任务-有指定下载目录 的零散取数任务")
+                            for down_dir in with_download_dir['download_dir'].unique():
+                                tasks_list = TaskListV2DataForExtensions.from_pandas(
+                                    with_download_dir[with_download_dir['download_dir'] == down_dir])
+                                for task in tasks_list:
+                                    task_uid = task.task_uid
+                                    tasks_list_template = extension.parse_tasklist_to_redis(
+                                        yaml_loader(extension_template_path[ext_name]),
+                                        [task])
+                                    redis_client = SimpleRedis(dynamic_load_from[ext_name])
+                                    redis_client.set(ext_name, tasks_list_template)
+                                    logger.info("任务已保存至Redis")
+                                    r = self.run_driver(ext_name)
+                                    done_tasks = r.get('done_tasks', [])
+                                    if len(done_tasks) > 0:
+                                        all_done_jobs.append(task_uid)
+                                    logger.info(f"指定下载目录为{down_dir}的{task}任务执行完毕\n")
 
                     logger.info(f"所有属于插件{drn}的任务执行完毕\n")
                 logger.info(f"所有任务执行完毕")
 
                 done_content_stmt = ",".join([f"'{task_uid}'" for task_uid in all_done_jobs])
-                sql = f"update collector_rest.tasks_list_v2 set task_status = 1 where task_content in ({done_content_stmt})"
+                sql = f"update collector_rest.tasks_list_v2 set task_status = 1 where task_content in ({done_content_stmt}) or task_uid in ({done_content_stmt})"
                 dao.connect()
                 dao.session.execute(text(sql))
                 dao.session.commit()
