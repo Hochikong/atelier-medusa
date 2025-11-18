@@ -1,14 +1,15 @@
 import os, logging, sys
 from loguru import logger
 
-from MCF2Flash.app_config import MCF_CELERY_LOG_DIR
+from MCF2Flash.app_config import MCF_CELERY_LOG_DIR, DEBUG_MODE
 
 
 def loguru_setup(filename_prefix: str = "celery-worker", level: str = "INFO"):
     """filename 只给文件名即可，目录固定为 MCF_CELERY_LOG_DIR"""
     filename = '%s_{time}.log' % filename_prefix
     os.makedirs(MCF_CELERY_LOG_DIR, exist_ok=True)
-    logger.remove()
+    if not DEBUG_MODE:
+        logger.remove()
     logger.add(
         os.path.join(MCF_CELERY_LOG_DIR, filename),
         rotation="50 MB",

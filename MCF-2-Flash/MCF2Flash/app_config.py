@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
+DEBUG_MODE = os.getenv("DEBUG_MODE", False)
 MCF_CELERY_LOG_DIR = os.getenv("MCF_CELERY_LOG_DIR", "total_logs")
 # Redis Broker URL
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
