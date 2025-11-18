@@ -10,6 +10,7 @@ from typing import Any, List, Union
 
 import psutil
 from seleniumbase import Driver, SB
+from seleniumbase.core import browser_launcher
 from sqlalchemy import text
 
 t = pathlib.Path(__file__).parent.resolve()
@@ -45,6 +46,11 @@ class MCF2FlashCore(object):
         self.plugin_logs_dir = self.config['Extensions']['plugin_logs_dir']
         os.makedirs(self.plugin_logs_dir, exist_ok=True)
 
+        # 指定chromedriver path
+        self.driver_path = self.config.get('Environment', {}).get('chrome_driver_path', None)
+        if self.driver_path:
+            browser_launcher.override_driver_dir(self.driver_path)
+
         # 运行环境
         self.use_xvnc = self.config.get('Environment', {}).get('use_xvnc', False)
         self.vnc_port = self.config.get('Environment', {}).get('vnc_port', 5911)
@@ -67,6 +73,7 @@ class MCF2FlashCore(object):
 
     def init_browser(self):
         if self.sb_manager is None:
+            self.start_xvnc()
             self.sb_manager = SBOmniWrapper(**self.config['Selenium'])
             self.sb = self.sb_manager.sb
             self.driver = self.sb_manager.driver
@@ -128,6 +135,8 @@ class MCF2FlashCore(object):
         self.sb = None
         self.driver = None
         self.sb_manager = None
+
+        self.stop_xvnc()
 
     def run_driver(self, extensions: Union[List[str], str] = None) -> Any:
         ext_mgr = self.extension_loader
