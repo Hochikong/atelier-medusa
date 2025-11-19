@@ -4,8 +4,8 @@ import readline
 
 from pathlib import Path
 from typing import List, Dict, Any
-from mcf_2f.cmd_parser import MCF2ShellParser
-from mcf_2f.mcf_2f_core import MCF2FlashCore
+from MCF2Flash.mcf_2f.cmd_parser import MCF2ShellParser
+from MCF2Flash.mcf_2f.mcf_2f_core import MCF2FlashCore
 
 
 class MiniREPL:
