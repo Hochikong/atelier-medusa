@@ -6,11 +6,13 @@ Selenium:
   user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0
   uc: True
   headless: False
+  xvfb: True
+  window_size: 1920,1080
+  xvfb-metrics: 2560,1440
   # 这里的参数会原封不动地传递给Wrapper
 
 Environment:
   chrome_driver_path: xxx
-  use_xvnc: False
   vnc_port: 5911
   novnc_port: 9101
 

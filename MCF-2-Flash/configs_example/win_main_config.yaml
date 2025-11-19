@@ -10,7 +10,6 @@ Selenium:
 
 Environment:
   chrome_driver_path: xxx
-  use_xvnc: False
   vnc_port: 5911
   novnc_port: 9101
 

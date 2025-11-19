@@ -52,10 +52,11 @@ class MCF2FlashCore(object):
             browser_launcher.override_driver_dir(self.driver_path)
 
         # 运行环境
-        self.use_xvnc = self.config.get('Environment', {}).get('use_xvnc', False)
+        self.xvfb = self.config.get('Selenium', {}).get('xvfb', False)
+        self.xvfb_display: int = -1
         self.vnc_port = self.config.get('Environment', {}).get('vnc_port', 5911)
         self.novnc_port = self.config.get('Environment', {}).get('novnc_port', 9101)
-        self.v_display = None
+        self.x11vnc_proc = None
         self.novnc_proc = None
 
         # 插件相关
@@ -73,17 +74,27 @@ class MCF2FlashCore(object):
 
     def init_browser(self):
         if self.sb_manager is None:
-            self.start_xvnc()
             self.sb_manager = SBOmniWrapper(**self.config['Selenium'])
+            if self.xvfb:
+                if self.sb_manager.sb.xvfb:
+                    # 通过启用SB的xvfb参数来实现xvfb，然后通过他的自定义的pyvirtualdisplay来获取xvfb的display编号，从而实现vnc转发
+                    self.xvfb_display = int(self.sb_manager.sb._xvfb_display.new_display_var.replace(":", ""))
+                    self.start_novnc()
             self.sb = self.sb_manager.sb
             self.driver = self.sb_manager.driver
         else:
             self.logger.warning("Browser already initialized!")
 
-    def stop_xvnc(self):
-        if self.v_display:
-            self.v_display.stop()
+    def dispose(self):
+        if self.sb_manager is not None:
+            self.sb_manager.dispose()
+        self.sb = None
+        self.driver = None
+        self.sb_manager = None
 
+        self.stop_novnc()
+
+    def stop_novnc(self):
         if self.novnc_proc:
             pid = self.novnc_proc.pid
             parent = psutil.Process(pid)
@@ -91,17 +102,24 @@ class MCF2FlashCore(object):
                 child.kill()
             self.novnc_proc.terminate()
 
-    def start_xvnc(self) -> bool:
+        if self.x11vnc_proc:
+            pid = self.x11vnc_proc.pid
+            parent = psutil.Process(pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+            self.x11vnc_proc.terminate()
+
+    def start_novnc(self) -> bool:
         logger = self.logger
         vnc_port = self.vnc_port
         forward_port = self.novnc_port
-        if os.name == 'posix' and self.use_xvnc:
+        if os.name == 'posix' and self.xvfb:
             # 默认PyVirtualDisplay实现
             try:
-                from pyvirtualdisplay import Display
-                logger.info(f"启动novnc服务，转发本地vnc端口{vnc_port}至{forward_port}")
-                self.novnc_proc = subprocess.Popen(f"novnc --vnc localhost:{vnc_port} --listen {forward_port}",
-                                                   shell=True)
+                logger.info(f"启动x11vnc服务，转发本地xvfb display:{self.xvfb_display}至vnc端口{vnc_port}")
+                self.x11vnc_proc = subprocess.Popen(
+                    f"x11vnc -display :{self.xvfb_display} -forever -shared -nopw -rfbport {vnc_port}",
+                    shell=True)
 
                 # kill掉有相同rfbport的xvnc进程
                 vnc_processes = []
@@ -113,30 +131,16 @@ class MCF2FlashCore(object):
                     logger.info(f"清除抢占xvnc端口: {vnc_port} 的进程")
                 sleep(1)
 
-                logger.info(f"启动xvnc服务，本地端口{vnc_port}")
-                self.v_display = Display(backend="xvnc", size=(1920, 1080), rfbport=vnc_port)
-                self.v_display.start()
-            except ModuleNotFoundError:
-                logger.info("未找到pyvirtualdisplay模块，尝试使用xvfbwrapper")
-                from xvfbwrapper import Xvfb
-                self.v_display = Xvfb()
-                self.v_display.start()
-            except Exception as e:
-                logger.error(f"启动xvnc服务失败: {e}")
+                logger.info(f"启动novnc服务，转发本地vnc端口{vnc_port}至novnc端口{forward_port}")
+                self.novnc_proc = subprocess.Popen(
+                    f" websockify --web=/usr/share/novnc {forward_port} localhost:{vnc_port}",
+                    shell=True)
+                return True
+            except Exception as _:
                 logger.error(traceback.format_exc())
-
-            return True
+                return False
         else:
             return False
-
-    def dispose(self):
-        if self.sb_manager is not None:
-            self.sb_manager.dispose()
-        self.sb = None
-        self.driver = None
-        self.sb_manager = None
-
-        self.stop_xvnc()
 
     def run_driver(self, extensions: Union[List[str], str] = None) -> Any:
         ext_mgr = self.extension_loader
