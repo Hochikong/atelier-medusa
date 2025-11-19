@@ -2,8 +2,7 @@
 My own LLM utils and projects
 
 # 安装部分依赖
-## PyVirtualDisplay
 ```bash
-$ sudo apt-get install xvfb xserver-xephyr tigervnc-standalone-server x11-utils gnumeric
+$ sudo apt install -y xvfb x11vnc novnc websockify
 $ uv add install pillow EasyProcess
 ```

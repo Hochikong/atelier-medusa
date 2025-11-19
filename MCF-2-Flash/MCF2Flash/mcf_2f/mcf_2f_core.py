@@ -116,24 +116,29 @@ class MCF2FlashCore(object):
         if os.name == 'posix' and self.xvfb:
             # 默认PyVirtualDisplay实现
             try:
-                logger.info(f"启动x11vnc服务，转发本地xvfb display:{self.xvfb_display}至vnc端口{vnc_port}")
-                self.x11vnc_proc = subprocess.Popen(
-                    f"x11vnc -display :{self.xvfb_display} -forever -shared -nopw -rfbport {vnc_port}",
-                    shell=True)
-
                 # kill掉有相同rfbport的xvnc进程
                 vnc_processes = []
                 for proc in psutil.process_iter():
-                    if f'-rfbport {vnc_port}' in ' '.join(proc.cmdline()):
-                        vnc_processes.append(proc)
+                    try:
+                        if f'-rfbport {vnc_port}' in ' '.join(proc.cmdline()):
+                            print(proc.cmdline())
+                            vnc_processes.append(proc)
+                    except Exception:
+                        logger.warning(f"获取进程信息失败: {proc.pid}")
+                        logger.warning(traceback.format_exc())
                 for i in vnc_processes:
                     i.kill()
                     logger.info(f"清除抢占xvnc端口: {vnc_port} 的进程")
                 sleep(1)
 
+                logger.info(f"启动x11vnc服务，转发本地xvfb display:{self.xvfb_display}至vnc端口{vnc_port}")
+                self.x11vnc_proc = subprocess.Popen(
+                    f"x11vnc -display :{self.xvfb_display} -forever -shared -nopw -rfbport {vnc_port}",
+                    shell=True)
+
                 logger.info(f"启动novnc服务，转发本地vnc端口{vnc_port}至novnc端口{forward_port}")
                 self.novnc_proc = subprocess.Popen(
-                    f" websockify --web=/usr/share/novnc {forward_port} localhost:{vnc_port}",
+                    f"websockify --web=/usr/share/novnc {forward_port} localhost:{vnc_port}",
                     shell=True)
                 return True
             except Exception as _:

@@ -8,7 +8,7 @@ Selenium:
   headless: False
   xvfb: True
   window_size: 1920,1080
-  xvfb-metrics: 2560,1440
+  xvfb_metrics: 2560,1440
   # 这里的参数会原封不动地传递给Wrapper
 
 Environment:
