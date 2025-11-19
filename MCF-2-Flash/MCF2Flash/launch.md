@@ -3,7 +3,7 @@
 windows下启动必须指定pool为solo或者threads，linux下则无所谓。如果需要定时调度worker，则需要配置启动celery beat
 
 ```powershell
-PS C:\Users\ckhoi\PycharmProjects\atelier-medusa\MCF-2-Flash> celery -A MCF2Flash.celery_core worker --pool=solo --loglevel=info
+PS C:\Users\ckhoi\PycharmProjects\atelier-medusa\MCF-2-Flash> celery -A MCF2Flash.celery_core worker --loglevel=info --pool=solo 
 PS C:\Users\ckhoi\PycharmProjects\atelier-medusa\MCF-2-Flash> celery -A MCF2Flash.celery_core beat --loglevel=info 
 ```
 

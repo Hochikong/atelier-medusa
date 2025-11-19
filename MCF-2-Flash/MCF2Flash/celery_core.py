@@ -45,7 +45,7 @@ celery_app.conf.update(
 
 celery_app.conf.beat_schedule = {
     'run-tasks-not-done-every-2-minutes': {
-        'task': 'MCF2Flash.celery_misc.mcf_v2_tasks.run_tasks_not_done',
+        'task': 'run_tasks_not_done',
         'schedule': crontab(minute='*/2'),  # 每2分钟执行一次
     },
 }

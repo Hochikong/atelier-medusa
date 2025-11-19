@@ -213,7 +213,7 @@ class MCF2FlashCore(object):
         logger.info("连接到数据库")
         dao.connect()
         not_done_tasks: pd.DataFrame = pd.read_sql(
-            "select * from collector_rest.tasks_list_v2 tl where task_status = 3",
+            "select * from tasks_list_v2 tl where task_status = 3",
             dao.session.bind)
         if 'extra_content' not in not_done_tasks.columns:
             not_done_tasks['extra_content'] = None
@@ -324,7 +324,7 @@ class MCF2FlashCore(object):
                 logger.info(f"所有任务执行完毕")
 
                 done_content_stmt = ",".join([f"'{task_uid}'" for task_uid in all_done_jobs])
-                sql = f"update collector_rest.tasks_list_v2 set task_status = 1 where task_content in ({done_content_stmt}) or task_uid in ({done_content_stmt})"
+                sql = f"update tasks_list_v2 set task_status = 1 where task_content in ({done_content_stmt}) or task_uid in ({done_content_stmt})"
                 dao.connect()
                 dao.session.execute(text(sql))
                 dao.session.commit()
