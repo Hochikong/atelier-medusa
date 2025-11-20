@@ -36,7 +36,7 @@ def dispose_browser():
 
 
 @router.post("/mcf/v2/tasks/single/special", tags=['tasks'])
-def receive_task(task: SingleTaskReceiveSpecial, db: Session = Depends(get_db)):
+def receive_task_special(task: SingleTaskReceiveSpecial, db: Session = Depends(get_db)):
     """
     适用于特殊任务的一次性提交
 
@@ -73,7 +73,7 @@ def receive_task(task: SingleTaskReceive, db: Session = Depends(get_db)):
 
 
 @router.post("/mcf/v2/tasks/bulk/", tags=['tasks'])
-def receive_tasks(tasks: BulkTasksReceive, db: Session = Depends(get_db)):
+def receive_tasks_bulk(tasks: BulkTasksReceive, db: Session = Depends(get_db)):
     """
     常规批量任务批量发送
 
