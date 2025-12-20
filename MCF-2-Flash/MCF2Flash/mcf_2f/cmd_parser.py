@@ -46,7 +46,7 @@ class MCF2ShellParser(object):
                 print("Running extension...")
                 driver_name = parse_result['args'][0]
                 try:
-                    result = mcf.run_driver(driver_name)
+                    result = mcf._run_driver(driver_name)
                     print(result)
                 except Exception as _:
                     print(traceback.format_exc())

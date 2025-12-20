@@ -1,15 +1,17 @@
-import os, logging, sys
+import logging
+import os
+
 from loguru import logger
 
-from MCF2Flash.app_config import MCF_CELERY_LOG_DIR, DEBUG_MODE
+from MCF2Flash.app_config import MCF_CELERY_LOG_DIR
 
 
 def loguru_setup(filename_prefix: str = "celery-worker", level: str = "INFO"):
     """filename 只给文件名即可，目录固定为 MCF_CELERY_LOG_DIR"""
     filename = '%s_{time}.log' % filename_prefix
     os.makedirs(MCF_CELERY_LOG_DIR, exist_ok=True)
-    if not DEBUG_MODE:
-        logger.remove()
+    # if not DEBUG_MODE:
+    logger.remove()
     logger.add(
         os.path.join(MCF_CELERY_LOG_DIR, filename),
         rotation="50 MB",
@@ -19,8 +21,8 @@ def loguru_setup(filename_prefix: str = "celery-worker", level: str = "INFO"):
         enqueue=True,
         backtrace=False,
     )
-    logger.add(sys.stdout, level=level,
-               format='[{time:YYYY-MM-DD} {time:HH:mm:ss}][{file}:{line}][{level}] -> {message}')
+    # logger.add(sys.stdout, level=level,
+    #            format='[{time:YYYY-MM-DD} {time:HH:mm:ss}][{file}:{line}][{level}] -> {message}')
 
     # 桥接到标准 logging
     class InterceptHandler(logging.Handler):

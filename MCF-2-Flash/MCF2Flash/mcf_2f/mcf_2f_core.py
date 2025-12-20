@@ -147,7 +147,13 @@ class MCF2FlashCore(object):
         else:
             return False
 
-    def run_driver(self, extensions: Union[List[str], str] = None) -> Any:
+    def _run_driver(self, extensions: Union[List[str], str] = None) -> Any:
+        """
+        这个函数在web部署时不允许被直接调用
+
+        :param extensions:
+        :return:
+        """
         ext_mgr = self.extension_loader
         sb_manager = self.sb_manager
         if isinstance(extensions, str):
@@ -259,7 +265,7 @@ class MCF2FlashCore(object):
                             redis_client.set(ext_name, tasks_list_template)
                             logger.info("任务已保存至Redis")
 
-                            r = self.run_driver(ext_name)
+                            r = self._run_driver(ext_name)
                             done_tasks = r.get('done_tasks', [])
                             if len(done_tasks) > 0:
                                 all_done_jobs.extend(done_tasks)
@@ -276,7 +282,7 @@ class MCF2FlashCore(object):
                                 redis_client = SimpleRedis(dynamic_load_from[ext_name])
                                 redis_client.set(ext_name, tasks_list_template)
                                 logger.info("任务已保存至Redis")
-                                r = self.run_driver(ext_name)
+                                r = self._run_driver(ext_name)
                                 done_tasks = r.get('done_tasks', [])
                                 if len(done_tasks) > 0:
                                     all_done_jobs.extend(done_tasks)
@@ -296,7 +302,7 @@ class MCF2FlashCore(object):
                                 redis_client.set(ext_name, tasks_list_template)
                                 logger.info("任务已保存至Redis")
 
-                                r = self.run_driver(ext_name)
+                                r = self._run_driver(ext_name)
                                 done_tasks = r.get('done_tasks', [])
                                 if len(done_tasks) > 0:
                                     all_done_jobs.append(task_uid)
@@ -314,7 +320,7 @@ class MCF2FlashCore(object):
                                     redis_client = SimpleRedis(dynamic_load_from[ext_name])
                                     redis_client.set(ext_name, tasks_list_template)
                                     logger.info("任务已保存至Redis")
-                                    r = self.run_driver(ext_name)
+                                    r = self._run_driver(ext_name)
                                     done_tasks = r.get('done_tasks', [])
                                     if len(done_tasks) > 0:
                                         all_done_jobs.append(task_uid)

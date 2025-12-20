@@ -1,6 +1,7 @@
 import pathlib
 import sys
 import logging
+import time
 
 t = pathlib.Path(__file__).parent.resolve()
 sys.path.append("..")
@@ -31,4 +32,6 @@ def run_tasks_not_done():
     mcf = get_mcf()
     dao = UniversalDAO(MCF2F_DB_URL, logger)
     mcf.run_tasks_in_db_not_done(dao)
+    mcf.dispose()
+    time.sleep(2)
     return True
