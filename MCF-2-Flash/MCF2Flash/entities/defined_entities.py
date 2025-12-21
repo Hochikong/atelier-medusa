@@ -47,4 +47,7 @@ class TasksListV2(BaseMixin, Dec_Base):
             'comment': 'MCFv2批量模式-任务表'
         }
     )
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
 # endregion

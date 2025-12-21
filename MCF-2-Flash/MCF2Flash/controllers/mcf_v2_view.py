@@ -1,6 +1,6 @@
 import uuid
 
-from djsplugins.MCF2f.driver_router import get_router_output_v2
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -10,7 +10,8 @@ import MCF2Flash.repository.defined_repositories as dr
 from MCF2Flash.celery_misc.mcf_v2_tasks import init_browser as ib, dispose_browser as db, run_tasks_not_done
 from MCF2Flash.domains.defined_domains import SingleTaskReceive, BulkTasksReceive, TaskRowCreate, \
     SingleTaskReceiveSpecial
-from MCF2Flash.fastapi_depends import SessionLocal
+from MCF2Flash.fastapi_depends import SessionLocal, get_namespace_common, get_driver_mgmt
+from MCF2Flash.commons.v2_abstract_extension import TaskListV2DataForExtensions, AbstractExtensionMCFV2
 
 router = APIRouter()
 
@@ -45,11 +46,39 @@ def receive_task_special(task: SingleTaskReceiveSpecial, db: Session = Depends(g
     :return:
     """
     logger.info(f"Received task: {task.url}")
-    created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
-                                 driver_info=task.driver, extra_content=task.extra_content)
-    status = dr.create_task(db, created_task)
-    total_status = status
-    return {'status': total_status}
+
+    exists_tasks = dr.get_same_special_tasks(db, task)
+    exists_tasks = [i.to_dict() for i in exists_tasks]
+
+    NO_SAME_TASKS = True
+    if len(exists_tasks) > 0:
+        exists_tasks_df = pd.DataFrame(exists_tasks)
+        tl = TaskListV2DataForExtensions.from_pandas(exists_tasks_df)
+        current_task = TaskListV2DataForExtensions(task_uid=str(uuid.uuid4()),
+                                                   task_content=task.url,
+                                                   task_status=3,
+                                                   driver_info=task.driver,
+                                                   download_dir=None,
+                                                   extra_content=task.extra_content,
+                                                   _namespace=task.driver.split(":")[0],
+                                                   _driver_name=task.driver.split(":")[1])
+
+        extension: AbstractExtensionMCFV2 = get_driver_mgmt().extension_loader[current_task._driver_name]
+        for exists_task in tl:
+            if extension.task_equal(current_task, exists_task):
+                NO_SAME_TASKS = False
+                break
+    else:
+        NO_SAME_TASKS = True
+
+    if NO_SAME_TASKS:
+        created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
+                                     driver_info=task.driver, extra_content=task.extra_content)
+        status = dr.create_task(db, created_task)
+        total_status = status
+        return {'status': total_status}
+    else:
+        return {'status': False, "msg": f"任务: ({task}) 已存在，拒绝再次添加特殊任务"}
 
 
 @router.post("/mcf/v2/tasks/single/", tags=['tasks'])
@@ -63,7 +92,7 @@ def receive_task(task: SingleTaskReceive, db: Session = Depends(get_db)):
     """
     total_status = False
     logger.info(f"Received task: {task.url}")
-    driver_info = get_router_output_v2(task.url)
+    driver_info = get_namespace_common().infer_driver(task.url)
     for info in driver_info:
         created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
                                      driver_info=info['driver'])
@@ -84,7 +113,7 @@ def receive_tasks_bulk(tasks: BulkTasksReceive, db: Session = Depends(get_db)):
     total_status = False
     params = tasks.params
     for url in tasks.urls:
-        driver_info = get_router_output_v2(url)
+        driver_info = get_namespace_common().infer_driver(url)
         for info in driver_info:
             created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=url, task_status=3,
                                          driver_info=info['driver'],

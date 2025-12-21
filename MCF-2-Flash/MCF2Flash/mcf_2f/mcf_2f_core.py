@@ -24,6 +24,18 @@ from MCF2Flash.mcf_2f.extension_mgr import ExtLoader
 from MCF2Flash.mcf_2f.selenium_core import SBOmniWrapper
 
 
+class DriverMgmt(object):
+    def __init__(self, main_config_path: str):
+        if os.path.exists(main_config_path) and os.path.isfile(main_config_path):
+            self.config: dict = yaml_loader(main_config_path, encoding='utf-8')
+        else:
+            raise FileNotFoundError(main_config_path)
+
+        self.extension_config = self.config['Extensions']
+        self.extension_ns = self.extension_config['namespace']
+        self.extension_loader = ExtLoader(self.extension_ns, invoke_on_load=True)
+
+
 class MCF2FlashCore(object):
     def __init__(self, logger: Any, main_config_path: str):
         self.logger = logger

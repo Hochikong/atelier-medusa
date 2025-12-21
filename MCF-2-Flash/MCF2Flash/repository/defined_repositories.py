@@ -1,5 +1,5 @@
 import datetime
-
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import List
 from MCF2Flash.entities.defined_entities import TasksListV2
@@ -7,15 +7,19 @@ import MCF2Flash.domains.defined_domains as domains
 
 
 def get_task_by_uid(db: Session, uuid: str) -> TasksListV2:
-    return db.query(TasksListV2).filter(TasksListV2.task_uid == uuid).one()
+    return db.scalar(select(TasksListV2).where(TasksListV2.task_uid == uuid))
 
 
 def get_tasks_by_status(db: Session, status: int) -> List[TasksListV2]:
-    return db.query(TasksListV2).filter(TasksListV2.task_status == status).all()
+    return list(db.scalars(select(TasksListV2).filter(TasksListV2.task_status == status)).all())
 
 
 def get_tasks(db: Session, skip: int = 0, limit: int = 100) -> List[TasksListV2]:
-    return db.query(TasksListV2).offset(skip).limit(limit).all()
+    return list(db.scalars(select(TasksListV2).offset(skip).limit(limit)).all())
+
+
+def get_same_special_tasks(db: Session, sp_task: domains.SingleTaskReceiveSpecial) -> List[TasksListV2]:
+    return list(db.scalars(select(TasksListV2).filter(TasksListV2.driver_info == sp_task.driver)).all())
 
 
 def create_task(db: Session, task_params: domains.TaskRowCreate) -> bool:

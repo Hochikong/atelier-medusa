@@ -11,7 +11,7 @@ class TaskListV2DataForExtensions:
     task_content: str
     task_status: int
     driver_info: str
-    download_dir: str
+    download_dir: Optional[str]
     extra_content: Optional[str]
     _namespace: str = None
     _driver_name: str = None
@@ -180,5 +180,29 @@ class AbstractExtensionMCFV2(metaclass=ABCMeta):
         """
         是否支持把多个任务项合并成单次批量执行
 
+        """
+        pass
+
+    @abstractmethod
+    def task_equal(self, task1: TaskListV2DataForExtensions, task2: TaskListV2DataForExtensions) -> bool:
+        """
+        判断两个任务项是否相等，来实现禁止重复任务执行
+
+        :param task1:
+        :param task2:
+        :return:
+        """
+        pass
+
+
+class AbstractExtensionNameSpaceCommon(metaclass=ABCMeta):
+    @staticmethod
+    @abstractmethod
+    def infer_driver(input_value: any) -> list:
+        """
+        从输入推断使用当前namespace下的什么驱动
+
+        :param input_value:
+        :return:
         """
         pass
