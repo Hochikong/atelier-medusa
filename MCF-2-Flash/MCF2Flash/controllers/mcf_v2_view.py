@@ -90,7 +90,6 @@ def receive_task(task: SingleTaskReceive, db: Session = Depends(get_db)):
     :param db:
     :return:
     """
-    total_status = False
     logger.info(f"Received task: {task.url}")
     driver_info = get_namespace_common().infer_driver(task.url)
 
