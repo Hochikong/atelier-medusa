@@ -14,6 +14,11 @@ def get_tasks_by_status(db: Session, status: int) -> List[TasksListV2]:
     return list(db.scalars(select(TasksListV2).filter(TasksListV2.task_status == status)).all())
 
 
+def get_tasks_by_content(db: Session, task_content: str, driver_name: str) -> List[TasksListV2]:
+    return list(db.scalars(select(TasksListV2).filter(TasksListV2.task_content == task_content).filter(
+        TasksListV2.driver_info == driver_name)).all())
+
+
 def get_tasks(db: Session, skip: int = 0, limit: int = 100) -> List[TasksListV2]:
     return list(db.scalars(select(TasksListV2).offset(skip).limit(limit)).all())
 

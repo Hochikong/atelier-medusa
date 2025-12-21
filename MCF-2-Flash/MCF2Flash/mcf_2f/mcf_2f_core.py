@@ -110,15 +110,21 @@ class MCF2FlashCore(object):
         if self.novnc_proc:
             pid = self.novnc_proc.pid
             parent = psutil.Process(pid)
-            for child in parent.children(recursive=True):
-                child.kill()
+            try:
+                for child in parent.children(recursive=True):
+                    child.kill()
+            except Exception as _:
+                pass
             self.novnc_proc.terminate()
 
         if self.x11vnc_proc:
             pid = self.x11vnc_proc.pid
             parent = psutil.Process(pid)
-            for child in parent.children(recursive=True):
-                child.kill()
+            try:
+                for child in parent.children(recursive=True):
+                    child.kill()
+            except Exception as _:
+                pass
             self.x11vnc_proc.terminate()
 
     def start_novnc(self) -> bool:
@@ -225,9 +231,6 @@ class MCF2FlashCore(object):
             logger.warning("Running tasks is locked! Skip this job for now")
             return None
 
-        if self.sb_manager is None:
-            self.init_browser()
-
         logger.info("连接到数据库")
         dao.connect()
         not_done_tasks: pd.DataFrame = pd.read_sql(
@@ -268,6 +271,10 @@ class MCF2FlashCore(object):
                     if extension.can_merge_multiple_to_one_batch():
                         if len(no_download_dir) > 0:
                             logger.info("开始执行 可合并子任务-无专门指定下载目录 的零散取数任务")
+
+                            if self.sb_manager is None:
+                                self.init_browser()
+
                             tasks_list = TaskListV2DataForExtensions.from_pandas(no_download_dir)
                             logger.info("调用插件解析队列任务")
                             tasks_list_template = extension.parse_tasklist_to_redis(
@@ -285,6 +292,10 @@ class MCF2FlashCore(object):
 
                         if len(with_download_dir) > 0:
                             logger.info("开始执行 可合并子任务-有指定下载目录 的零散取数任务")
+
+                            if self.sb_manager is None:
+                                self.init_browser()
+
                             for down_dir in with_download_dir['download_dir'].unique():
                                 tasks_list = TaskListV2DataForExtensions.from_pandas(
                                     with_download_dir[with_download_dir['download_dir'] == down_dir])
@@ -302,6 +313,10 @@ class MCF2FlashCore(object):
                     else:
                         if len(no_download_dir) > 0:
                             logger.info("开始执行 不可合并子任务-无专门指定下载目录 的零散取数任务")
+
+                            if self.sb_manager is None:
+                                self.init_browser()
+
                             tasks_list = TaskListV2DataForExtensions.from_pandas(no_download_dir)
                             for task in tasks_list:
                                 # 不可合并任务使用task_uid来标记任务完成情况
@@ -321,6 +336,10 @@ class MCF2FlashCore(object):
                                 logger.info(f"零散任务 {task} 执行完毕\n")
                         if len(with_download_dir) > 0:
                             logger.info("开始执行 不可合并子任务-有指定下载目录 的零散取数任务")
+
+                            if self.sb_manager is None:
+                                self.init_browser()
+
                             for down_dir in with_download_dir['download_dir'].unique():
                                 tasks_list = TaskListV2DataForExtensions.from_pandas(
                                     with_download_dir[with_download_dir['download_dir'] == down_dir])

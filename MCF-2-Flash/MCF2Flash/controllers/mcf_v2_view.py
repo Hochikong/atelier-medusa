@@ -93,12 +93,42 @@ def receive_task(task: SingleTaskReceive, db: Session = Depends(get_db)):
     total_status = False
     logger.info(f"Received task: {task.url}")
     driver_info = get_namespace_common().infer_driver(task.url)
+
     for info in driver_info:
-        created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
-                                     driver_info=info['driver'])
-        status = dr.create_task(db, created_task)
-        total_status = status
-    return {'status': total_status}
+        driver_full_name = info['driver']
+
+        exists_tasks = dr.get_tasks_by_content(db, task.url, driver_full_name)
+        exists_tasks = [i.to_dict() for i in exists_tasks]
+
+        NO_SAME_TASKS = True
+        if len(exists_tasks) > 0:
+            exists_tasks_df = pd.DataFrame(exists_tasks)
+            tl = TaskListV2DataForExtensions.from_pandas(exists_tasks_df)
+            current_task = TaskListV2DataForExtensions(task_uid=str(uuid.uuid4()),
+                                                       task_content=task.url,
+                                                       task_status=3,
+                                                       driver_info=driver_full_name,
+                                                       download_dir=None,
+                                                       extra_content=None,
+                                                       _namespace=driver_full_name.split(":")[0],
+                                                       _driver_name=driver_full_name.split(":")[1])
+
+            extension: AbstractExtensionMCFV2 = get_driver_mgmt().extension_loader[current_task._driver_name]
+            for exists_task in tl:
+                if extension.task_equal(current_task, exists_task):
+                    NO_SAME_TASKS = False
+                    break
+        else:
+            NO_SAME_TASKS = True
+
+        if NO_SAME_TASKS:
+            created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
+                                         driver_info=driver_full_name)
+            status = dr.create_task(db, created_task)
+            total_status = status
+            return {'status': total_status}
+        else:
+            return {'status': False, "msg": f"任务: ({task.url}) 已存在，拒绝再次添加Single任务"}
 
 
 @router.post("/mcf/v2/tasks/bulk/", tags=['tasks'])
@@ -106,21 +136,57 @@ def receive_tasks_bulk(tasks: BulkTasksReceive, db: Session = Depends(get_db)):
     """
     常规批量任务批量发送
 
-    :param task:
+    :param tasks:
     :param db:
     :return:
     """
-    total_status = False
     params = tasks.params
+
+    add_urls = []
+    urls_with_status = []
+
     for url in tasks.urls:
+        logger.warning(f"Received task: {url}")
         driver_info = get_namespace_common().infer_driver(url)
+        logger.warning(driver_info)
         for info in driver_info:
-            created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=url, task_status=3,
-                                         driver_info=info['driver'],
-                                         download_dir=params.get('download_child_dir', None))
-            status = dr.create_task(db, created_task)
-            total_status = status
-    return {'status': total_status}
+            driver_full_name = info['driver']
+
+            exists_tasks = dr.get_tasks_by_content(db, url, driver_full_name)
+            exists_tasks = [i.to_dict() for i in exists_tasks]
+
+            NO_SAME_TASKS = True
+            if len(exists_tasks) > 0:
+                exists_tasks_df = pd.DataFrame(exists_tasks)
+                tl = TaskListV2DataForExtensions.from_pandas(exists_tasks_df)
+                current_task = TaskListV2DataForExtensions(task_uid=str(uuid.uuid4()),
+                                                           task_content=url,
+                                                           task_status=3,
+                                                           driver_info=driver_full_name,
+                                                           download_dir=None,
+                                                           extra_content=None,
+                                                           _namespace=driver_full_name.split(":")[0],
+                                                           _driver_name=driver_full_name.split(":")[1])
+
+                extension: AbstractExtensionMCFV2 = get_driver_mgmt().extension_loader[current_task._driver_name]
+                for exists_task in tl:
+                    if extension.task_equal(current_task, exists_task):
+                        NO_SAME_TASKS = False
+                        break
+            else:
+                NO_SAME_TASKS = True
+
+            if NO_SAME_TASKS:
+                created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=url, task_status=3,
+                                             driver_info=driver_full_name,
+                                             download_dir=params.get('download_child_dir', None))
+                status = dr.create_task(db, created_task)
+                add_urls.append(url)
+                urls_with_status.append({'url': url, 'status': status})
+            else:
+                urls_with_status.append({'url': url, 'status': False, "msg": f"任务: ({url}) 已存在，拒绝再次添加为Bulk任务成员"})
+
+    return {'status': urls_with_status}
 
 
 @router.get('/mcf/v2/tasks/{uid}', tags=['tasks'])
