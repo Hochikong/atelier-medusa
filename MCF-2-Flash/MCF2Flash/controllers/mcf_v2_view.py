@@ -78,7 +78,11 @@ def receive_task_special(task: SingleTaskReceiveSpecial, db: Session = Depends(g
         total_status = status
         return {'status': total_status}
     else:
-        return {'status': False, "msg": f"任务: ({task}) 已存在，拒绝再次添加特殊任务"}
+        created_task = TaskRowCreate(task_uid=str(uuid.uuid4()), task_content=task.url, task_status=3,
+                                     driver_info=task.driver, extra_content=task.extra_content)
+        status = dr.create_task(db, created_task)
+        total_status = status
+        return {'status': total_status, "msg": f"任务: ({task}) 已存在，尝试再进入队列处理增量内容"}
 
 
 @router.post("/mcf/v2/tasks/single/", tags=['tasks'])
