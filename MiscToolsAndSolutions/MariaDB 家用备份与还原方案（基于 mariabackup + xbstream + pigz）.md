@@ -160,7 +160,7 @@ sudo chmod +x /usr/local/bin/inc_backup.sh
 ### 5.1 快速校验（备份后检查 LSN）
 全量备份后，查看日志中的 `completed OK` 即可。增量备份后，解压压缩包查看 `xtrabackup_checkpoints`：
 ```bash
-pigz -dc /mnt/large_drive/mariadb/inc/20250101_020000.xb.gz | xbstream -x -C /tmp/check_inc xtrabackup_checkpoints
+pigz -dc /mnt/large_drive/mariadb/inc/20250101_020000.xb.gz | mbstream -x -C /tmp/check_inc xtrabackup_checkpoints
 cat /tmp/check_inc/xtrabackup_checkpoints
 ```
 确保 `from_lsn` 等于前一次备份的 `to_lsn`，链条完整。
