@@ -284,7 +284,10 @@ class MCF2FlashCore(object):
                             redis_client.set(ext_name, tasks_list_template)
                             logger.info("任务已保存至Redis")
 
-                            r = self._run_driver(ext_name)
+                            try:
+                                r = self._run_driver(ext_name)
+                            except Exception:
+                                logger.error(f"插件{ext_name}执行异常，将收集已完成的任务，跳过失败的任务")
                             done_tasks = r.get('done_tasks', [])
                             if len(done_tasks) > 0:
                                 all_done_jobs.extend(done_tasks)
@@ -305,7 +308,10 @@ class MCF2FlashCore(object):
                                 redis_client = SimpleRedis(dynamic_load_from[ext_name])
                                 redis_client.set(ext_name, tasks_list_template)
                                 logger.info("任务已保存至Redis")
-                                r = self._run_driver(ext_name)
+                                try:
+                                    r = self._run_driver(ext_name)
+                                except Exception:
+                                    logger.error(f"插件{ext_name}执行异常，将收集已完成的任务，跳过失败的任务")
                                 done_tasks = r.get('done_tasks', [])
                                 if len(done_tasks) > 0:
                                     all_done_jobs.extend(done_tasks)
@@ -329,7 +335,10 @@ class MCF2FlashCore(object):
                                 redis_client.set(ext_name, tasks_list_template)
                                 logger.info("任务已保存至Redis")
 
-                                r = self._run_driver(ext_name)
+                                try:
+                                    r = self._run_driver(ext_name)
+                                except Exception:
+                                    logger.error(f"插件{ext_name}执行异常，将收集已完成的任务，跳过失败的任务")
                                 done_tasks = r.get('done_tasks', [])
                                 if len(done_tasks) > 0:
                                     all_done_jobs.append(task_uid)
@@ -351,7 +360,10 @@ class MCF2FlashCore(object):
                                     redis_client = SimpleRedis(dynamic_load_from[ext_name])
                                     redis_client.set(ext_name, tasks_list_template)
                                     logger.info("任务已保存至Redis")
-                                    r = self._run_driver(ext_name)
+                                    try:
+                                        r = self._run_driver(ext_name)
+                                    except Exception:
+                                        logger.error(f"插件{ext_name}执行异常，将收集已完成的任务，跳过失败的任务")
                                     done_tasks = r.get('done_tasks', [])
                                     if len(done_tasks) > 0:
                                         all_done_jobs.append(task_uid)
