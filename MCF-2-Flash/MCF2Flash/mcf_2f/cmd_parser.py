@@ -30,7 +30,7 @@ class MCF2ShellParser(object):
                 print("  /h or /help [command]    - Show help for a specific command")
                 print("  /get_browser             - Init browser by configuration file")
                 print("  /safe_check              - Check the browser status and visit a cloudflare protected website")
-                print("  /run_extension           - Run a MCF v2 Extension, example: /run_extension XXX")
+                print("  /run_extension           - Run a MCF v2 Extension, example: /run_extension NHFilter")
                 print("  /exit                    - Exit shell")
 
             elif CMD == 'get_browser':

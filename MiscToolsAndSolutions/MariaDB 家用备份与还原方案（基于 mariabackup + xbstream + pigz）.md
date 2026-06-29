@@ -107,16 +107,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 查找最近的备份文件（全量优先，否则增量）
+# 查找最近的备份文件（优先以最近的增量为基础，否则回退到全量）
 LATEST_FULL=$(ls -t $BACKUP_BASE/full/*.xb.gz 2>/dev/null | head -1)
 LATEST_INC=$(ls -t $BACKUP_BASE/inc/*.xb.gz 2>/dev/null | head -1)
 
-if [ -n "$LATEST_FULL" ]; then
-    BASE_FILE="$LATEST_FULL"
-    BASE_TYPE="full"
-elif [ -n "$LATEST_INC" ]; then
+# 注意：增量优先，形成链式增量链条（inc1 → inc2 → inc3 ...）
+# 如果全量优先，每次增量都从同一个全量出发，导致每个增量都是独立的全量差分，
+# 文件体积大且后一个不会覆盖前一个，浪费磁盘空间。
+if [ -n "$LATEST_INC" ]; then
     BASE_FILE="$LATEST_INC"
     BASE_TYPE="incremental"
+elif [ -n "$LATEST_FULL" ]; then
+    BASE_FILE="$LATEST_FULL"
+    BASE_TYPE="full"
 else
     echo "No previous backup found. Run a full backup first." | tee "$LOG_FILE"
     exit 1
@@ -157,7 +160,7 @@ sudo chmod +x /usr/local/bin/inc_backup.sh
 ### 5.1 快速校验（备份后检查 LSN）
 全量备份后，查看日志中的 `completed OK` 即可。增量备份后，解压压缩包查看 `xtrabackup_checkpoints`：
 ```bash
-pigz -dc /mnt/large_drive/mariadb/inc/20250101_020000.xb.gz | xbstream -x -C /tmp/check_inc xtrabackup_checkpoints
+pigz -dc /mnt/large_drive/mariadb/inc/20250101_020000.xb.gz | mbstream -x -C /tmp/check_inc xtrabackup_checkpoints
 cat /tmp/check_inc/xtrabackup_checkpoints
 ```
 确保 `from_lsn` 等于前一次备份的 `to_lsn`，链条完整。
@@ -262,6 +265,25 @@ find "$BACKUP_BASE/inc" -name "*.xb.gz" -mtime +30 -delete
 - **增量脚本的 LSN 提取**：每次增量备份前都会解压前一个备份的 checkpoints 文件，会占用少量计算资源，但适合家用环境。
 - **非 InnoDB 表**：mariabackup 默认会在备份末尾短暂锁表，保证 MyISAM 等引擎的一致性，对家用环境影响极小。
 - **安全**：备份文件建议复制到其他物理介质（如 NAS、外置硬盘），并定期测试恢复。
+
+## 10. 修复记录
+
+### 2026-05-27：增量基准选择 Bug 修复
+
+**问题**：`inc_backup.sh` 中基准备份的选择逻辑为「全量优先」，导致每次增量备份都基于同一个全量备份，而不是基于前一个增量。后果：
+- 无法形成增量链条（inc1 → inc2 → inc3 ...），每个增量都是独立的完整差分
+- 增量文件体积偏大，浪费磁盘空间
+- 还原时仍需逐个 apply 所有增量（不是只 apply 最新的那个）
+
+**修复**：将选择逻辑改为「增量优先」——先查找最近的增量备份，没有增量时才回退到全量。修复后增量备份形成真正的链式关系，中间增量体积会显著变小。
+
+**还原行为**（修复后）：必须按时间顺序依次 apply 所有增量 —— full → inc1 → inc2 → inc3。**不能**只还原最新的增量，因为每个增量只包含自上一个备份以来的变化。
+
+### 使用提醒
+
+- **还原**：严格按照第 6.5 节的 for 循环，将所有增量按时间顺序在 full 之上依次 `--prepare`。
+- **校验**：还原前应先检查每个增量包的 `xtrabackup_checkpoints`，确保 `from_lsn` 等于上一个备份的 `to_lsn`，链条完整无断裂。
+- **清理**：删除旧全量备份前，确保该全量所关联的所有增量备份也已删除或不再需要，否则这些增量将无法单独使用。
 
 ---
 
