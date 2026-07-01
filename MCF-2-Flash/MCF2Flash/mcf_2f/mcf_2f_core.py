@@ -108,21 +108,27 @@ class MCF2FlashCore(object):
 
     def stop_novnc(self):
         if self.novnc_proc:
-            pid = self.novnc_proc.pid
-            parent = psutil.Process(pid)
             try:
-                for child in parent.children(recursive=True):
-                    child.kill()
+                pid = self.novnc_proc.pid
+                parent = psutil.Process(pid)
+                try:
+                    for child in parent.children(recursive=True):
+                        child.kill()
+                except Exception as _:
+                    pass
             except Exception as _:
                 pass
             self.novnc_proc.terminate()
 
         if self.x11vnc_proc:
-            pid = self.x11vnc_proc.pid
-            parent = psutil.Process(pid)
             try:
-                for child in parent.children(recursive=True):
-                    child.kill()
+                pid = self.x11vnc_proc.pid
+                parent = psutil.Process(pid)
+                try:
+                    for child in parent.children(recursive=True):
+                        child.kill()
+                except Exception as _:
+                    pass
             except Exception as _:
                 pass
             self.x11vnc_proc.terminate()
@@ -291,6 +297,7 @@ class MCF2FlashCore(object):
                             done_tasks = r.get('done_tasks', [])
                             if len(done_tasks) > 0:
                                 all_done_jobs.extend(done_tasks)
+                            all_done_jobs = self.update_done_job_now(all_done_jobs, dao)
                             logger.info("零散任务执行完毕\n")
 
                         if len(with_download_dir) > 0:
@@ -315,6 +322,7 @@ class MCF2FlashCore(object):
                                 done_tasks = r.get('done_tasks', [])
                                 if len(done_tasks) > 0:
                                     all_done_jobs.extend(done_tasks)
+                                all_done_jobs = self.update_done_job_now(all_done_jobs, dao)
                                 logger.info(f"指定下载目录为{down_dir}的任务执行完毕\n")
                     else:
                         if len(no_download_dir) > 0:
@@ -342,6 +350,7 @@ class MCF2FlashCore(object):
                                 done_tasks = r.get('done_tasks', [])
                                 if len(done_tasks) > 0:
                                     all_done_jobs.append(task_uid)
+                                all_done_jobs = self.update_done_job_now(all_done_jobs, dao)
                                 logger.info(f"零散任务 {task} 执行完毕\n")
                         if len(with_download_dir) > 0:
                             logger.info("开始执行 不可合并子任务-有指定下载目录 的零散取数任务")
@@ -367,20 +376,29 @@ class MCF2FlashCore(object):
                                     done_tasks = r.get('done_tasks', [])
                                     if len(done_tasks) > 0:
                                         all_done_jobs.append(task_uid)
+                                    all_done_jobs = self.update_done_job_now(all_done_jobs, dao)
                                     logger.info(f"指定下载目录为{down_dir}的{task}任务执行完毕\n")
 
                     logger.info(f"所有属于插件{drn}的任务执行完毕\n")
                 logger.info(f"所有任务执行完毕")
 
-                done_content_stmt = ",".join([f"'{task_uid}'" for task_uid in all_done_jobs])
-                sql = f"update tasks_list_v2 set task_status = 1 where task_content in ({done_content_stmt}) or task_uid in ({done_content_stmt})"
-                dao.connect()
-                dao.session.execute(text(sql))
-                dao.session.commit()
-                dao.disconnect()
+                _ = self.update_done_job_now(all_done_jobs, dao)
             except Exception as _:
                 logger.error(traceback.format_exc())
             finally:
                 dao.disconnect()
                 self.running_lock = False
                 return True
+
+    @staticmethod
+    def update_done_job_now(all_done_jobs: list[Any], dao: UniversalDAO) -> list[Any]:
+        if len(all_done_jobs) > 0:
+            done_content_stmt = ",".join([f"'{task_uid}'" for task_uid in all_done_jobs])
+            sql = f"update tasks_list_v2 set task_status = 1 where task_content in ({done_content_stmt}) or task_uid in ({done_content_stmt})"
+            dao.connect()
+            dao.session.execute(text(sql))
+            dao.session.commit()
+            dao.disconnect()
+            return []
+        else:
+            return all_done_jobs
